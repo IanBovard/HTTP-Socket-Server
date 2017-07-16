@@ -1,12 +1,21 @@
 /* jshint esversion:6 */
+
 const net = require('net');
 const fs = require('fs');
 
-const responseGen = function (file, method, ok, date, type, connection){
+const responseGen = function (file, spec, status, date, type, connection, request){
   fs.readFile(file,(err, data) => {
     let dataStr = data.toString();
-    process.stdout.write(`\n${method}${ok}\n${date}\nContent-Type: ${type}\nContent-length: ${dataStr.length}\nConnection: ${connection}\n\n${dataStr}`);
+    request.write(`${spec}${status}\n${date}\nContent-Type: ${type}\nContent-length: ${dataStr.length}\nConnection: ${connection}\n\n${dataStr}\n`);
+    request.end();
+  });
+};
 
+const responseHead = function(file, spec, status, date, type, connection, request){
+  fs.readFile(file,(err, data) => {
+    let dataStr = data.toString();
+    request.write(`${spec}${status}\n${date}\nContent-Type: ${type}\nContent-length: ${dataStr.length}\nConnection: ${connection}\n`);
+    request.end();
   });
 };
 
@@ -21,40 +30,56 @@ const server = net.createServer((request) => {
     let path = reqArray[1];
     let spec = reqArray[2];
 
+
     let ok = ' 200 OK';
     let notFound = ' 404 Not Found';
     let date = `Date: ${new Date().toUTCString()}`;
     let htmlFile = 'text/html; charset=utf-8';
     let cssFile = 'text/css; charset=utf-8';
     let conType = 'keep-alive';
-    fs.readFile('index.html', (err, data) => {
-      index = data.length;
-    });
 
     if (method === 'GET'){
       switch (path) {
         case '/':
-        responseGen('index.html', method, ok, date, htmlFile, conType);
+        responseGen('index.html',spec, ok, date, htmlFile, conType, request);
         break;
         case '/index.html':
-        responseGen('index.html', method, ok, date, htmlFile, conType);
+        responseGen('index.html', spec, ok, date, htmlFile, conType, request);
         break;
         case '/hydrogen.html':
-        responseGen('hydrogen.html', method, ok, date, htmlFile, conType);
+        responseGen('hydrogen.html', spec, ok, date, htmlFile, conType, request);
         break;
         case '/helium.html':
-        responseGen('helium.html', method, ok, date, htmlFile, conType);
+        responseGen('helium.html', spec, ok, date, htmlFile, conType, request);
         break;
         case 'styles.css':
-        responseGen('styles.css', method, ok, date, cssFile, conType);
+        responseGen('styles.css', spec, ok, date, cssFile, conType, request);
         break;
         default:
-        responseGen('404.html', method, notFound, date, htmlFile, conType);
+        responseGen('404.html', spec, notFound, date, htmlFile, conType, request);
       }
-    }else{
-      responseGen('404.html', method, notFound, date, htmlFile, conType);
+    }else if (method === 'HEAD'){
+      switch (path) {
+        case '/':
+        responseHead('index.html', spec, ok, date, htmlFile, conType, request);
+        break;
+        case '/index.html':
+        responseHead('index.html', spec, ok, date, htmlFile, conType, request);
+        break;
+        case '/hydrogen.html':
+        responseHead('hydrogen.html', spec, ok, date, htmlFile, conType, request);
+        break;
+        case '/helium.html':
+        responseHead('helium.html', spec, ok, date, htmlFile, conType, request);
+        break;
+        case 'styles.css':
+        responseHead('styles.css', spec, ok, date, cssFile, conType, request);
+        break;
+        default:
+        responseHead('404.html', spec, notFound, date, htmlFile, conType, request);
+      }
     }
-    request.end();
+    responseHead('404.html', spec, notFound, date, htmlFile, conType, request);
   });
 });
 
